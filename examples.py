@@ -1,6 +1,7 @@
 import requests
 import json
 import re
+import ftfy
 
 class OllamaApi:
 
@@ -27,7 +28,17 @@ class OllamaApi:
 
     @staticmethod
     def fix_invalid_escapes(s):
-        return s.encode('utf-8').decode('unicode_escape')
+        if not isinstance(s, str):
+            return s
+
+        try:
+            s_re = ftfy.fix_text(s)
+            if s_re != s:
+                s = s_re
+        except Exception as e:
+            print(f"Encoding failed for text: {e}")
+
+        return s
 
     @classmethod
     def models(cls):
@@ -113,15 +124,13 @@ class OllamaApi:
                 return cls.FALSE_RETURN
             else:
                 return cls.secure_json_response(response) if force_json else cls.secure_text_response(response)
+
         except requests.exceptions.Timeout:
             print(f"ERROR: The request took to long. Adjust the timeout ({cls.TIMEOUT}) as needed")
             return cls.FALSE_RETURN
         except Exception as e:
             print(f"ERROR: Request exception: {e}")
             return cls.FALSE_RETURN
-
-        return cls.secure_json_response(response) if force_json else cls.secure_text_response(response)
-
 
     @classmethod
     def secure_json_response(cls, response):
@@ -150,7 +159,7 @@ class OllamaApi:
 
         try:
             # Try to parse To json
-            result = json.loads(cls.fix_invalid_escapes(message))
+            result = json.loads(message)
 
             # Overwrite text result with json dict
             text_response["result"] = dict(result)
@@ -189,7 +198,7 @@ class OllamaApi:
             token_count = parsed_json.get('eval_count')
 
             return {
-                "result": str(message),
+                "result": cls.fix_invalid_escapes(message),
                 "time": float(seconds_elapsed),
                 "token": int(token_count),
                 "info": {}
@@ -205,8 +214,15 @@ class OllamaApi:
 
 if __name__ == "__main__":
 
-    # Select Ollama Model to use
-    model_name = "llama3.3:70b"
+    # Load all available models by name
+    models = OllamaApi.models()
+    model_names = [model.get("name") for model in models]
+    print(f"\n-------\nAvailable models ({len(model_names)}):")
+    print(" | ".join(model_names))
+
+    # Define Model to use for examples
+    model_name = "qwq:32b-fp16"
+    print(f"-------\nUsing model {model_name}:")
 
     # Example 1
     # Prompt Completion - Text return
@@ -250,8 +266,8 @@ if __name__ == "__main__":
       "required": ["lines"]
     }
     completion_json_result = OllamaApi.completion(msg, model=model_name, schema=schema)
-    print(json.dumps(completion_json_result, indent=4))
-    print(f"\nResult:\n{json.dumps(completion_json_result.get('result'), indent=4)}")
+    print(json.dumps(completion_json_result, indent=4, ensure_ascii=False))
+    print(f"\nResult:\n{json.dumps(completion_json_result.get('result'), indent=4, ensure_ascii=False)}")
 
 
     # Example 4
@@ -260,5 +276,5 @@ if __name__ == "__main__":
 
     # we re-use the chat context from example 2 as well as the json schema from example 3
     chat_json_result = OllamaApi.chat(chat_context, model=model_name, schema=schema)
-    print(json.dumps(chat_json_result, indent=4))
-    print(f"\nResult:\n{json.dumps(chat_json_result.get('result'), indent=4)}")
+    print(json.dumps(chat_json_result, indent=4, ensure_ascii=False))
+    print(f"\nResult:\n{json.dumps(chat_json_result.get('result'), indent=4, ensure_ascii=False)}")
