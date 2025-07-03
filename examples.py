@@ -11,6 +11,8 @@ class OllamaApi:
     TIMEOUT = 120
     STREAM_RESPONSE = False # Only for debug purposes. !! Result will be null !!
 
+    THINKING = False
+
     FALSE_RETURN = {"result": None, "time": 0, "token": 0, "info": {}}
 
     DEFAULT_OPTIONS = {
@@ -96,11 +98,10 @@ class OllamaApi:
         payload = {
             "model": model,
             "prompt" : prompt,
-            "stream": cls.STREAM_RESPONSE,
             "options": {
                 **cls.DEFAULT_OPTIONS,
                 **options
-            } if options is not None else cls.DEFAULT_OPTIONS
+            } if options is not None else cls.DEFAULT_OPTIONS,
         }
         if schema is not None:
             payload["format"] = schema
@@ -112,11 +113,10 @@ class OllamaApi:
         payload = {
             "model": model,
             "messages": chat,
-            "stream": cls.STREAM_RESPONSE,
             "options": {
                 **cls.DEFAULT_OPTIONS,
                 **options
-            } if options is not None else cls.DEFAULT_OPTIONS
+            } if options is not None else cls.DEFAULT_OPTIONS,
         }
         if schema is not None:
             payload["format"] = schema
@@ -135,6 +135,13 @@ class OllamaApi:
         headers = {
             "Content-Type": "application/json",
             "accept": "application/json"
+        }
+
+        payload = {
+            **payload,
+            "think": cls.THINKING,
+            "stream": cls.STREAM_RESPONSE,
+            "keep_alive": "5m"
         }
 
         try:
@@ -260,7 +267,7 @@ if __name__ == "__main__":
     # OllamaApi.pull_model("llama4","17b-scout-16e-instruct-q8_0")
 
     # Define Model to use for examples
-    model_name = "gemma3:27b"
+    model_name = "gemma3:12b"
     print(f"-------\nUsing model {model_name}:")
 
     # Example 1
